@@ -1,0 +1,7 @@
+{
+  "name": "牌局计账 (Poker Scorekeeper)",
+  "description": "A professional mobile-first poker scorekeeping application for recording game rounds, calculating winner points, and managing room-based multiplayer game sessions.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
