@@ -4,13 +4,15 @@
  */
 
 const normalizeApiBaseUrl = (url: string): string => {
-  if (!url) return 'http://localhost:3000/api';
+  if (!url) return 'http://127.0.0.1:3000/api';
   const trimmed = url.trim();
   if (trimmed.endsWith('/api')) return trimmed;
+  if (trimmed === '/api') return trimmed;
   return `${trimmed.replace(/\/$/, '')}/api`;
 };
 
-const FALLBACK_LAN_API_BASE_URL = 'http://192.168.0.34:3000/api';
+const LOCAL_API_BASE_URL = 'http://127.0.0.1:3000/api';
+const NATIVE_FALLBACK_API_BASE_URL = 'http://8.148.81.221:3000/api';
 
 const isNativeCapacitorRuntime = (): boolean => {
   if (typeof window === 'undefined') return false;
@@ -37,18 +39,18 @@ const resolveApiBaseUrl = (): string => {
   const isDev = Boolean((import.meta as any)?.env?.DEV);
 
   if (isNativeCapacitorRuntime()) {
-    return FALLBACK_LAN_API_BASE_URL;
+    return NATIVE_FALLBACK_API_BASE_URL;
   }
 
-  if (typeof window !== 'undefined' && window.location?.hostname) {
-    const host = window.location.hostname;
-    if (!isDev && (host === 'localhost' || host === '127.0.0.1')) {
-      return FALLBACK_LAN_API_BASE_URL;
-    }
-    return `${window.location.protocol}//${window.location.hostname}:3000/api`;
+  if (isDev) {
+    return LOCAL_API_BASE_URL;
   }
 
-  return FALLBACK_LAN_API_BASE_URL;
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/api`;
+  }
+
+  return LOCAL_API_BASE_URL;
 };
 
 export const ENV_CONFIG = {

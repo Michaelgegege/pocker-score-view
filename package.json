@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "deploy:local": "powershell -ExecutionPolicy Bypass -File scripts/deploy-local.ps1",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open:android": "npx cap open android",
     "cap:run:android": "npm run build && npx cap run android"
