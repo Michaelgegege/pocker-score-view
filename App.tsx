@@ -13,10 +13,12 @@ import { mockCloud } from './services/mockCloud';
 import apiClient from './services/apiClient';
 import { ToastProvider } from './components/Toast';
 import { getApiService } from './config/apiSwitch';
+import firstImage from './first.png';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showStartupSplash, setShowStartupSplash] = useState(true);
 
   useEffect(() => {
     // 初始化 API 并获取当前用户
@@ -36,15 +38,29 @@ const App: React.FC = () => {
     initializeApp();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowStartupSplash(false);
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('poker_user');
     setCurrentUser(null);
   };
 
-  if (loading) {
+  if (showStartupSplash || loading) {
     return (
-      <div className="min-h-screen bg-background-dark flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <img
+          src={firstImage}
+          alt="启动页"
+          className="w-full h-full object-contain"
+        />
       </div>
     );
   }

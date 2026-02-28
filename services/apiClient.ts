@@ -12,26 +12,88 @@ interface ApiResponse<T> {
   [key: string]: any;
 }
 
+const getStatusFallbackMessage = (status: number, fallback: string): string => {
+  switch (status) {
+    case 401:
+      return '登录状态已过期，请重新登录';
+    case 403:
+      return '暂无权限执行该操作';
+    case 404:
+      return '请求的资源不存在';
+    case 408:
+      return '请求超时，请稍后重试';
+    case 429:
+      return '请求过于频繁，请稍后再试';
+    case 500:
+      return '服务暂时异常，请稍后重试';
+    case 502:
+    case 503:
+    case 504:
+      return '服务暂时不可用，请稍后重试';
+    default:
+      return fallback;
+  }
+};
+
+const isHtmlLike = (text: string): boolean => {
+  const normalized = text.trim().toLowerCase();
+  return (
+    normalized.startsWith('<!doctype html') ||
+    normalized.startsWith('<html') ||
+    /<\s*html[\s>]/i.test(normalized) ||
+    /<\s*body[\s>]/i.test(normalized)
+  );
+};
+
+const normalizeErrorText = (text: string, fallback: string, status?: number): string => {
+  const raw = (text || '').trim();
+  if (!raw) {
+    return typeof status === 'number' ? getStatusFallbackMessage(status, fallback) : fallback;
+  }
+
+  const lowerRaw = raw.toLowerCase();
+  if (
+    isHtmlLike(raw) ||
+    lowerRaw.includes('bad gateway') ||
+    lowerRaw.includes('nginx/') ||
+    lowerRaw.includes('<center>')
+  ) {
+    return typeof status === 'number' ? getStatusFallbackMessage(status, fallback) : fallback;
+  }
+
+  const plainText = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!plainText) {
+    return typeof status === 'number' ? getStatusFallbackMessage(status, fallback) : fallback;
+  }
+
+  if (plainText.length > 120) {
+    return typeof status === 'number' ? getStatusFallbackMessage(status, fallback) : fallback;
+  }
+
+  return plainText;
+};
+
 const getBackendErrorMessage = (payload: any, fallback: string): string => {
-  if (payload?.message) return payload.message;
+  if (payload?.message) return normalizeErrorText(String(payload.message), fallback);
   if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
-    return payload.errors[0]?.msg || fallback;
+    return normalizeErrorText(String(payload.errors[0]?.msg || ''), fallback);
   }
   return fallback;
 };
 
 const getErrorMessageFromResponse = async (response: Response, fallback: string): Promise<string> => {
+  const fallbackByStatus = getStatusFallbackMessage(response.status, fallback);
   try {
     const text = await response.text();
-    if (!text) return fallback;
+    if (!text) return fallbackByStatus;
     try {
       const parsed = JSON.parse(text);
-      return getBackendErrorMessage(parsed, fallback);
+      return getBackendErrorMessage(parsed, fallbackByStatus);
     } catch {
-      return text;
+      return normalizeErrorText(text, fallbackByStatus, response.status);
     }
   } catch {
-    return fallback;
+    return fallbackByStatus;
   }
 };
 
@@ -191,10 +253,23 @@ app.use(cors({
 
 // 错误处理辅助函数
 const handleApiError = (error: any) => {
-  if (error.response?.data?.message) {
-    throw new Error(error.response.data.message);
+  const networkFallback = '网络异常，请检查网络后重试';
+  const defaultFallback = '请求失败，请稍后重试';
+
+  if (
+    error?.message?.includes?.('Failed to fetch') ||
+    error?.message?.includes?.('NetworkError') ||
+    error?.name === 'TypeError'
+  ) {
+    throw new Error(networkFallback);
   }
-  throw new Error(error.message || 'API 请求失败');
+
+  if (error.response?.data?.message) {
+    throw new Error(normalizeErrorText(String(error.response.data.message), defaultFallback));
+  }
+
+  const normalized = normalizeErrorText(String(error?.message || ''), defaultFallback);
+  throw new Error(normalized || defaultFallback);
 };
 
 export const apiClient = {

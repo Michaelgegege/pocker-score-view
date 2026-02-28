@@ -6,7 +6,6 @@ import { mockCloud } from '../services/mockCloud';
 import apiClient from '../services/apiClient';
 import { useToast } from '../components/Toast';
 import { getApiService } from '../config/apiSwitch';
-import { getApiBaseUrl } from '../config/env';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -44,7 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         e?.response?.data?.message ||
         (Array.isArray(e?.response?.data?.errors) ? e.response.data.errors[0]?.msg : '') ||
         '登录失败，请重试';
-      toast.error(`${message}（API: ${getApiBaseUrl()}）`);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
